@@ -1,0 +1,27 @@
+# Files and directories ignored when sending build context to Docker daemon
+
+# Git
+.git
+.gitignore
+
+# Environment variables (Very important for security)
+.env
+.env.*
+
+# Go dependencies
+vendor/
+
+# Temporary files & IDE
+tmp/
+bin/
+.idea/
+.vscode/
+*.swp
+*.log
+
+# Docker files
+Dockerfile
+.dockerignore
+
+# Build artifacts
+docapi

@@ -1,0 +1,229 @@
+openapi: 3.0.3
+info:
+  title: DocAPI
+  version: 1.0.0
+  description: |
+    Simple document storage API.
+    Notes:
+    - Pagination for list endpoints uses `limit` and `offset` query parameters.
+paths:
+  /health:
+    get:
+      summary: Health check (DB connectivity)
+      tags: [Health]
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: healthy
+        '503':
+          description: Service unhealthy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /healthz:
+    get:
+      summary: Liveness probe
+      tags: [Health]
+      responses:
+        '200':
+          description: Alive (no body)
+  /documents:
+    get:
+      summary: List documents
+      description: Returns paginated list of documents.
+      tags: [Documents]
+      parameters:
+        - $ref: '#/components/parameters/LimitParam'
+        - $ref: '#/components/parameters/OffsetParam'
+      responses:
+        '200':
+          description: List of documents
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DocumentListResult'
+              examples:
+                example:
+                  value:
+                    data:
+                      - id: "7e2d0d64-9c14-4e26-a0ca-5f0f4f0f27b0"
+                        filename: "a1b2c3.pdf"
+                        storage_path: "documents/a1b2c3.pdf"
+                        size: 12345
+                        content_type: "application/pdf"
+                        created_at: "2026-01-27T12:34:56Z"
+                    total: 1
+        '400':
+          description: Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Upload a document
+      description: Uploads a file using multipart/form-data (field name `file`).
+      tags: [Documents]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: string
+                  format: binary
+              required: [file]
+      responses:
+        '201':
+          description: Document created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          description: Bad request (missing file or invalid upload)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /documents/{id}:
+    get:
+      summary: Get a document by ID
+      tags: [Documents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Document ID (UUID)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Document'
+        '400':
+          description: Invalid ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a document by ID
+      tags: [Documents]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Document ID (UUID)
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '204':
+          description: Deleted successfully (no content)
+        '400':
+          description: Invalid ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  parameters:
+    LimitParam:
+      name: limit
+      in: query
+      description: Number of items to return (default 10)
+      schema:
+        type: integer
+        format: int32
+        minimum: 1
+        default: 10
+    OffsetParam:
+      name: offset
+      in: query
+      description: Number of items to skip before starting to collect the result set (default 0)
+      schema:
+        type: integer
+        format: int32
+        minimum: 0
+        default: 0
+  schemas:
+    Document:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        filename:
+          type: string
+        storage_path:
+          type: string
+        size:
+          type: integer
+          format: int64
+        content_type:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+      required: [id, filename, storage_path, size, content_type, created_at]
+    DocumentListResult:
+      type: object
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Document'
+        total:
+          type: integer
+          format: int32
+      required: [data, total]
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]

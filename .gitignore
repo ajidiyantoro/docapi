@@ -1,0 +1,28 @@
+# Binary files
+bin/
+docapi
+
+# Go dependencies and toolchain
+vendor/
+go.work
+go.work.sum
+
+# Environment variables
+.env
+.env.*
+
+# IDE specific files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS specific files
+.DS_Store
+Thumbs.db
+
+# Log files
+*.log
+
+# Temporary files
+tmp/
