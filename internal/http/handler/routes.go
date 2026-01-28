@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/swagger"
 	"github.com/google/uuid"
 
 	_ "docapi/docs"
@@ -174,9 +173,6 @@ func DeleteDocument(docSvc service.DocumentService) fiber.Handler {
 // RegisterRoutes attaches HTTP routes to the provided Fiber app.
 // Keep handlers minimal and free of business logic in this skeleton.
 func RegisterRoutes(app *fiber.App, db *sql.DB, docSvc service.DocumentService) {
-	// Swagger UI
-	app.Get("/swagger/*", swagger.HandlerDefault)
-
 	// Health check endpoint: checks DB connectivity only
 	app.Get("/health", HealthCheck(db))
 

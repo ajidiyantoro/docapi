@@ -2,8 +2,10 @@ package main
 
 import (
 	"log"
+	"strings"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 	_ "github.com/joho/godotenv/autoload"
 
 	"docapi/docs"
@@ -18,14 +20,10 @@ import (
 
 // @title Document API
 // @version 1.0
-// @host localhost:8080
 // @BasePath /
 func main() {
 	// Load configuration from environment variables (.env auto-loaded if present)
 	cfg := config.Load()
-
-	// Update Swagger info with dynamic host from config
-	docs.SwaggerInfo.Host = cfg.AppHost
 
 	// Initialize PostgreSQL connection (with pooling via database/sql)
 	db, err := database.NewPostgres(cfg.Database)
@@ -56,6 +54,19 @@ func main() {
 
 	// Register HTTP routes with injected service
 	handlers.RegisterRoutes(app, db, docSvc)
+
+	// Swagger UI with dynamic host and scheme
+	app.Get("/swagger/*", func(c *fiber.Ctx) error {
+		scheme := c.Protocol()
+		if proto := c.Get("X-Forwarded-Proto"); proto != "" {
+			scheme = strings.Split(proto, ",")[0]
+		}
+
+		docs.SwaggerInfo.Host = c.Get("Host")
+		docs.SwaggerInfo.Schemes = []string{scheme}
+
+		return swagger.HandlerDefault(c)
+	})
 
 	addr := ":" + cfg.Port
 
