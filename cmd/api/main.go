@@ -15,6 +15,10 @@ import (
 	"docapi/internal/storage"
 )
 
+// @title Document API
+// @version 1.0
+// @host localhost:8080
+// @BasePath /
 func main() {
 	// Load configuration from environment variables (.env auto-loaded if present)
 	cfg := config.Load()

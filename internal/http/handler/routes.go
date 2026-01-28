@@ -8,61 +8,58 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/swagger"
 	"github.com/google/uuid"
 
+	_ "docapi/docs"
+	_ "docapi/internal/model"
 	"docapi/internal/service"
 )
 
-// RegisterRoutes attaches HTTP routes to the provided Fiber app.
-// Keep handlers minimal and free of business logic in this skeleton.
-func RegisterRoutes(app *fiber.App, db *sql.DB, docSvc service.DocumentService) {
-	// Serve OpenAPI spec and Swagger UI
-	app.Get("/openapi.yaml", func(c *fiber.Ctx) error {
-		c.Type("yaml")
-		return c.SendFile("openapi.yaml")
-	})
-	app.Get("/docs", func(c *fiber.Ctx) error {
-		html := `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>API Docs</title>
-  <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css" />
-</head>
-<body>
-  <div id="swagger-ui"></div>
-  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
-  <script>
-    window.ui = SwaggerUIBundle({
-      url: '/openapi.yaml',
-      dom_id: '#swagger-ui',
-      presets: [SwaggerUIBundle.presets.apis],
-      layout: 'BaseLayout'
-    });
-  </script>
-</body>
-</html>`
-		return c.Type("html").SendString(html)
-	})
-
-	// New health endpoint: checks DB connectivity only
-	app.Get("/health", func(c *fiber.Ctx) error {
+// HealthCheck handles the health check request.
+// @Summary Health check
+// @Description Check database connectivity
+// @Tags health
+// @Produce json
+// @Success 200 {object} map[string]string
+// @Failure 503 {object} errorPayload
+// @Router /health [get]
+func HealthCheck(db *sql.DB) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		ctx, cancel := context.WithTimeout(c.UserContext(), 2*time.Second)
 		defer cancel()
 		if err := db.PingContext(ctx); err != nil {
 			return writeError(c, fiber.StatusServiceUnavailable, "SERVICE_UNAVAILABLE", "dependency unavailable")
 		}
 		return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "healthy"})
-	})
+	}
+}
 
-	// Backward-compatible simple liveness probe
-	app.Get("/healthz", func(c *fiber.Ctx) error {
+// LivenessProbe handles the liveness probe request.
+// @Summary Liveness probe
+// @Description Simple liveness probe
+// @Tags health
+// @Success 200 {string} string "OK"
+// @Router /healthz [get]
+func LivenessProbe() fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		return c.SendStatus(fiber.StatusOK)
-	})
+	}
+}
 
-	// List documents endpoint with limit & offset
-	app.Get("/documents", func(c *fiber.Ctx) error {
+// ListDocuments handles listing documents.
+// @Summary List documents
+// @Description Get a list of documents with pagination
+// @Tags documents
+// @Produce json
+// @Param limit query int false "Limit" default(10)
+// @Param offset query int false "Offset" default(0)
+// @Success 200 {array} model.Document
+// @Failure 400 {object} errorPayload
+// @Failure 500 {object} errorPayload
+// @Router /documents [get]
+func ListDocuments(docSvc service.DocumentService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		limitStr := c.Query("limit", "10")
 		offsetStr := c.Query("offset", "0")
 		limit, err := strconv.Atoi(limitStr)
@@ -79,10 +76,22 @@ func RegisterRoutes(app *fiber.App, db *sql.DB, docSvc service.DocumentService) 
 			return writeError(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
 		}
 		return c.JSON(res)
-	})
+	}
+}
 
-	// Upload document endpoint (multipart/form-data, field name: file)
-	app.Post("/documents", func(c *fiber.Ctx) error {
+// UploadDocument handles document upload.
+// @Summary Upload document
+// @Description Upload a new document
+// @Tags documents
+// @Accept multipart/form-data
+// @Produce json
+// @Param file formData file true "Document file"
+// @Success 201 {object} model.Document
+// @Failure 400 {object} errorPayload
+// @Failure 500 {object} errorPayload
+// @Router /documents [post]
+func UploadDocument(docSvc service.DocumentService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		fh, err := c.FormFile("file")
 		if err != nil {
 			return writeError(c, fiber.StatusBadRequest, "FILE_REQUIRED", "file is required")
@@ -104,10 +113,22 @@ func RegisterRoutes(app *fiber.App, db *sql.DB, docSvc service.DocumentService) 
 			return writeError(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
 		}
 		return c.Status(fiber.StatusCreated).JSON(doc)
-	})
+	}
+}
 
-	// Get document by ID
-	app.Get("/documents/:id", func(c *fiber.Ctx) error {
+// GetDocument handles getting a document by ID.
+// @Summary Get document
+// @Description Get a document by ID
+// @Tags documents
+// @Produce json
+// @Param id path string true "Document ID"
+// @Success 200 {object} model.Document
+// @Failure 400 {object} errorPayload
+// @Failure 404 {object} errorPayload
+// @Failure 500 {object} errorPayload
+// @Router /documents/{id} [get]
+func GetDocument(docSvc service.DocumentService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		if _, err := uuid.Parse(id); err != nil {
 			return writeError(c, fiber.StatusBadRequest, "INVALID_ID", "invalid id format")
@@ -121,10 +142,21 @@ func RegisterRoutes(app *fiber.App, db *sql.DB, docSvc service.DocumentService) 
 			return writeError(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
 		}
 		return c.JSON(doc)
-	})
+	}
+}
 
-	// Delete document by ID
-	app.Delete("/documents/:id", func(c *fiber.Ctx) error {
+// DeleteDocument handles deleting a document by ID.
+// @Summary Delete document
+// @Description Delete a document by ID
+// @Tags documents
+// @Param id path string true "Document ID"
+// @Success 204 "No Content"
+// @Failure 400 {object} errorPayload
+// @Failure 404 {object} errorPayload
+// @Failure 500 {object} errorPayload
+// @Router /documents/{id} [delete]
+func DeleteDocument(docSvc service.DocumentService) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		id := c.Params("id")
 		if _, err := uuid.Parse(id); err != nil {
 			return writeError(c, fiber.StatusBadRequest, "INVALID_ID", "invalid id format")
@@ -136,5 +168,30 @@ func RegisterRoutes(app *fiber.App, db *sql.DB, docSvc service.DocumentService) 
 			return writeError(c, fiber.StatusInternalServerError, "INTERNAL_ERROR", "internal server error")
 		}
 		return c.SendStatus(fiber.StatusNoContent)
-	})
+	}
+}
+
+// RegisterRoutes attaches HTTP routes to the provided Fiber app.
+// Keep handlers minimal and free of business logic in this skeleton.
+func RegisterRoutes(app *fiber.App, db *sql.DB, docSvc service.DocumentService) {
+	// Swagger UI
+	app.Get("/swagger/*", swagger.HandlerDefault)
+
+	// Health check endpoint: checks DB connectivity only
+	app.Get("/health", HealthCheck(db))
+
+	// Backward-compatible simple liveness probe
+	app.Get("/healthz", LivenessProbe())
+
+	// List documents endpoint with limit & offset
+	app.Get("/documents", ListDocuments(docSvc))
+
+	// Upload document endpoint (multipart/form-data, field name: file)
+	app.Post("/documents", UploadDocument(docSvc))
+
+	// Get document by ID
+	app.Get("/documents/:id", GetDocument(docSvc))
+
+	// Delete document by ID
+	app.Delete("/documents/:id", DeleteDocument(docSvc))
 }

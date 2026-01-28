@@ -27,6 +27,7 @@ DocAPI is a Go-based RESTful API service designed for managing documents. It use
 ├── cmd/
 │   └── api/
 │       └── main.go           # Application entry point
+├── docs/                    # Generated Swagger documentation
 ├── internal/
 │   ├── config/               # Configuration loading logic
 │   ├── database/             # Database connection setup
@@ -35,7 +36,6 @@ DocAPI is a Go-based RESTful API service designed for managing documents. It use
 │   ├── repository/           # Data access layer (PostgreSQL)
 │   ├── service/              # Business logic layer
 │   └── storage/              # Object storage layer (MinIO)
-├── openapi.yaml              # API specification (OpenAPI 3.0)
 ├── Dockerfile                # Docker build instructions
 ├── go.mod                    # Go module definition
 └── .env                      # Environment variables (not tracked)
@@ -109,4 +109,10 @@ The application is configured using environment variables. You can set these in 
 
 ## API Documentation
 
-The API is documented using OpenAPI 3.0. You can find the specification in the `openapi.yaml` file.
+The API documentation is automatically generated using Swagger. Once the application is running, you can access the Swagger UI at:
+`http://localhost:8080/swagger/index.html`
+
+To regenerate the documentation after making changes to the annotations:
+```bash
+swag init -g cmd/api/main.go
+```
