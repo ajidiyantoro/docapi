@@ -7,15 +7,15 @@ import (
 
 // DatabaseConfig holds PostgreSQL database connection settings.
 type DatabaseConfig struct {
-	Host                string
-	Port                string
-	User                string
-	Password            string
-	Name                string
-	SSLMode             string
-	MaxOpenConns        int
-	MaxIdleConns        int
-	ConnMaxLifetimeSec  int
+	Host               string
+	Port               string
+	User               string
+	Password           string
+	Name               string
+	SSLMode            string
+	MaxOpenConns       int
+	MaxIdleConns       int
+	ConnMaxLifetimeSec int
 }
 
 // MinIOConfig holds object storage settings for MinIO.
@@ -30,6 +30,7 @@ type MinIOConfig struct {
 // AppConfig is the centralized configuration struct for the application.
 // It is populated from environment variables. Sensitive values are not hardcoded.
 type AppConfig struct {
+	AppHost  string
 	Port     string
 	Database DatabaseConfig
 	MinIO    MinIOConfig
@@ -40,7 +41,8 @@ type AppConfig struct {
 // This function does not require a .env file; real environment variables take precedence.
 func Load() *AppConfig {
 	return &AppConfig{
-		Port: getEnv("PORT", "8080"), // default only for non-sensitive value
+		AppHost: getEnv("APP_HOST", "localhost:8080"),
+		Port:    getEnv("PORT", "8080"), // default only for non-sensitive value
 		Database: DatabaseConfig{
 			Host:               getEnv("DB_HOST", ""),
 			Port:               getEnv("DB_PORT", "5432"),

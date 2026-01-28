@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	_ "github.com/joho/godotenv/autoload"
 
+	"docapi/docs"
 	"docapi/internal/config"
 	"docapi/internal/database"
 	handlers "docapi/internal/http/handler"
@@ -22,6 +23,9 @@ import (
 func main() {
 	// Load configuration from environment variables (.env auto-loaded if present)
 	cfg := config.Load()
+
+	// Update Swagger info with dynamic host from config
+	docs.SwaggerInfo.Host = cfg.AppHost
 
 	// Initialize PostgreSQL connection (with pooling via database/sql)
 	db, err := database.NewPostgres(cfg.Database)
