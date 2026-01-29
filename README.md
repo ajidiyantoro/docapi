@@ -52,7 +52,7 @@ DocAPI is a Go-based RESTful API service designed for managing documents. It use
 
 1. **Clone the repository:**
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/ajidiyantoro/docapi.git
    cd docapi
    ```
 
