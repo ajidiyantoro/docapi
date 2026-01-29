@@ -66,6 +66,29 @@ DocAPI is a Go-based RESTful API service designed for managing documents. It use
 
 ## Running the Application
 
+### Database Setup
+
+Before running the application, make sure you have created the necessary table in your PostgreSQL database. You can use the following DDL:
+
+```sql
+-- PostgreSQL DDL
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+
+CREATE TABLE IF NOT EXISTS documents (
+  id           UUID        PRIMARY KEY DEFAULT uuid_generate_v4(),
+  filename     TEXT        NOT NULL,
+  storage_path TEXT        NOT NULL UNIQUE,
+  size         BIGINT      NOT NULL CHECK (size >= 0),
+  content_type TEXT        NOT NULL,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Index (optional)
+CREATE INDEX IF NOT EXISTS idx_documents_filename ON documents (filename);
+CREATE INDEX IF NOT EXISTS idx_documents_content_type ON documents (content_type);
+CREATE INDEX IF NOT EXISTS idx_documents_created_at ON documents (created_at);
+```
+
 ### Local Development
 
 To run the application locally:
