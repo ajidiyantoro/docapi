@@ -12,6 +12,8 @@ import (
 	"docapi/internal/config"
 )
 
+var sqlOpen = sql.Open
+
 // BuildPostgresDSN constructs a DSN for PostgreSQL using standard components.
 // Example: postgres://user:pass@host:port/dbname?sslmode=disable
 func BuildPostgresDSN(c config.DatabaseConfig) (string, error) {
@@ -46,7 +48,7 @@ func NewPostgres(c config.DatabaseConfig) (*sql.DB, error) {
 		return nil, err
 	}
 
-	db, err := sql.Open("pgx", dsn)
+	db, err := sqlOpen("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("sql open: %w", err)
 	}

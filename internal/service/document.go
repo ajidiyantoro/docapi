@@ -2,6 +2,8 @@ package service
 
 import (
 	"context"
+	"database/sql"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
@@ -14,10 +16,16 @@ import (
 	"docapi/internal/storage"
 )
 
+var (
+	ErrIDRequired = errors.New("id is required")
+	ErrNotFound   = errors.New("document not found")
+	ErrReaderNil  = errors.New("reader is nil")
+)
+
 // DocumentListResult is the service-level DTO for paginated documents.
 type DocumentListResult struct {
 	Items []model.Document `json:"data"`
-	Total int             `json:"total"`
+	Total int              `json:"total"`
 }
 
 // DocumentService defines the use cases for handling documents.
@@ -49,7 +57,7 @@ func NewDocumentService(store storage.Storage, repo repository.DocumentRepositor
 
 func (s *documentService) Upload(ctx context.Context, r io.Reader, originalFilename string, contentType string, size int64) (*model.Document, error) {
 	if r == nil {
-		return nil, fmt.Errorf("reader is nil")
+		return nil, ErrReaderNil
 	}
 	// Generate filename using UUID + extension
 	ext := filepath.Ext(originalFilename)
@@ -107,19 +115,29 @@ func (s *documentService) List(ctx context.Context, limit, offset int) (*Documen
 // Get returns a document by ID.
 func (s *documentService) Get(ctx context.Context, id string) (*model.Document, error) {
 	if id == "" {
-		return nil, fmt.Errorf("id is required")
+		return nil, ErrIDRequired
 	}
-	return s.repo.FindByID(ctx, id)
+	doc, err := s.repo.FindByID(ctx, id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNotFound
+		}
+		return nil, err
+	}
+	return doc, nil
 }
 
 // Delete removes a document from storage, then deletes its record.
 func (s *documentService) Delete(ctx context.Context, id string) error {
 	if id == "" {
-		return fmt.Errorf("id is required")
+		return ErrIDRequired
 	}
 	// Find the document to get its storage path
 	doc, err := s.repo.FindByID(ctx, id)
 	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return ErrNotFound
+		}
 		return err
 	}
 	// Delete from storage first; if this fails, keep DB row to avoid orphaned storage reference loss

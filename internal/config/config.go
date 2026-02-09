@@ -1,8 +1,10 @@
 package config
 
 import (
+	"log"
 	"os"
 	"strconv"
+	"time"
 )
 
 // DatabaseConfig holds PostgreSQL database connection settings.
@@ -32,6 +34,8 @@ type MinIOConfig struct {
 type AppConfig struct {
 	AppHost  string
 	Port     string
+	Timezone string
+	Location *time.Location
 	Database DatabaseConfig
 	MinIO    MinIOConfig
 }
@@ -40,9 +44,19 @@ type AppConfig struct {
 // A .env file can be auto-loaded by importing: _ "github.com/joho/godotenv/autoload"
 // This function does not require a .env file; real environment variables take precedence.
 func Load() *AppConfig {
+	tzStr := getEnv("APP_TZ", "Asia/Jakarta")
+	loc, err := time.LoadLocation(tzStr)
+	if err != nil {
+		log.Printf("warning: invalid APP_TZ %q, falling back to Asia/Jakarta: %v", tzStr, err)
+		// Fallback to Asia/Jakarta (UTC+7)
+		loc = time.FixedZone("Asia/Jakarta", 7*60*60)
+	}
+
 	return &AppConfig{
-		AppHost: getEnv("APP_HOST", "localhost:8080"),
-		Port:    getEnv("PORT", "8080"), // default only for non-sensitive value
+		AppHost:  getEnv("APP_HOST", "localhost:8080"),
+		Port:     getEnv("PORT", "8080"), // default only for non-sensitive value
+		Timezone: tzStr,
+		Location: loc,
 		Database: DatabaseConfig{
 			Host:               getEnv("DB_HOST", ""),
 			Port:               getEnv("DB_PORT", "5432"),

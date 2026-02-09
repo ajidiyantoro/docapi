@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/adaptor"
 	"github.com/google/uuid"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	_ "docapi/docs"
 	_ "docapi/internal/model"
@@ -190,4 +192,7 @@ func RegisterRoutes(app *fiber.App, db *sql.DB, docSvc service.DocumentService) 
 
 	// Delete document by ID
 	app.Delete("/documents/:id", DeleteDocument(docSvc))
+
+	// Prometheus metrics endpoint
+	app.Get("/metrics", adaptor.HTTPHandler(promhttp.Handler()))
 }

@@ -1,12 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
 	_ "github.com/joho/godotenv/autoload"
+	"github.com/prometheus/client_golang/prometheus"
 
 	"docapi/docs"
 	"docapi/internal/config"
@@ -43,14 +46,23 @@ func main() {
 	docSvc := service.NewDocumentService(objStore, docRepo)
 
 	app := fiber.New(fiber.Config{
-		ErrorHandler: handlers.ErrorHandler(),
+		ErrorHandler:          handlers.ErrorHandler(),
+		DisableStartupMessage: true,
 	})
+
+	// Initialize Prometheus middleware
+	promMiddleware, err := middleware.NewPrometheusMiddleware(prometheus.DefaultRegisterer)
+	if err != nil {
+		log.Fatalf("failed to initialize prometheus middleware: %v", err)
+	}
 
 	// Register global middleware
 	// RequestID middleware adds/propagates X-Request-ID and stores it in context
 	app.Use(middleware.RequestID())
 	// JSON Logger middleware for structured request logs
-	app.Use(middleware.Logger())
+	app.Use(middleware.Logger(cfg.Location))
+	// Prometheus middleware to track request count
+	app.Use(promMiddleware.Handler())
 
 	// Register HTTP routes with injected service
 	handlers.RegisterRoutes(app, db, docSvc)
@@ -69,6 +81,19 @@ func main() {
 	})
 
 	addr := ":" + cfg.Port
+
+	// Startup log in JSON format
+	startupLog := map[string]string{
+		"ts":    time.Now().In(cfg.Location).Format(time.RFC3339Nano),
+		"level": "info",
+		"msg":   "server_starting",
+		"addr":  addr,
+		"port":  cfg.Port,
+	}
+	if b, err := json.Marshal(startupLog); err == nil {
+		log.SetFlags(0)
+		log.Println(string(b))
+	}
 
 	if err := app.Listen(addr); err != nil {
 		log.Fatalf("failed to start server: %v", err)

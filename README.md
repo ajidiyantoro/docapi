@@ -112,23 +112,24 @@ go run cmd/api/main.go
 
 The application is configured using environment variables. You can set these in your shell or in a `.env` file.
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `PORT` | Port the server will listen on | `8080` |
-| `DB_HOST` | PostgreSQL host | |
-| `DB_PORT` | PostgreSQL port | `5432` |
-| `DB_USER` | PostgreSQL user | |
-| `DB_PASSWORD` | PostgreSQL password | |
-| `DB_NAME` | PostgreSQL database name | |
-| `DB_SSLMODE` | PostgreSQL SSL mode | `disable` |
-| `DB_MAX_OPEN_CONNS` | Max open DB connections | `10` |
-| `DB_MAX_IDLE_CONNS` | Max idle DB connections | `5` |
-| `DB_CONN_MAX_LIFETIME_SEC` | DB connection max lifetime (sec) | `300` |
-| `MINIO_ENDPOINT` | MinIO server endpoint | |
-| `MINIO_ACCESS_KEY` | MinIO access key | |
-| `MINIO_SECRET_KEY` | MinIO secret key | |
-| `MINIO_BUCKET` | MinIO bucket name | |
-| `MINIO_USE_SSL` | Use SSL for MinIO | `false` |
+| Variable                   | Description                      | Default        |
+|----------------------------|----------------------------------|----------------|
+| `PORT`                     | Port the server will listen on   | `8080`         |
+| `APP_TZ`                   | Timezone                         | `Asia/Jakarta` |
+| `DB_HOST`                  | PostgreSQL host                  |                |
+| `DB_PORT`                  | PostgreSQL port                  | `5432`         |
+| `DB_USER`                  | PostgreSQL user                  |                |
+| `DB_PASSWORD`              | PostgreSQL password              |                |
+| `DB_NAME`                  | PostgreSQL database name         |                |
+| `DB_SSLMODE`               | PostgreSQL SSL mode              | `disable`      |
+| `DB_MAX_OPEN_CONNS`        | Max open DB connections          | `10`           |
+| `DB_MAX_IDLE_CONNS`        | Max idle DB connections          | `5`            |
+| `DB_CONN_MAX_LIFETIME_SEC` | DB connection max lifetime (sec) | `300`          |
+| `MINIO_ENDPOINT`           | MinIO server endpoint            |                |
+| `MINIO_ACCESS_KEY`         | MinIO access key                 |                |
+| `MINIO_SECRET_KEY`         | MinIO secret key                 |                |
+| `MINIO_BUCKET`             | MinIO bucket name                |                |
+| `MINIO_USE_SSL`            | Use SSL for MinIO                | `false`        |
 
 ## API Documentation
 
