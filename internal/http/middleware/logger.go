@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"go.opentelemetry.io/otel/trace"
 )
 
 // Logger is a middleware that logs each HTTP request in JSON format.
@@ -40,14 +41,23 @@ func LoggerWithWriter(w io.Writer, loc *time.Location) fiber.Handler {
 		status := c.Response().StatusCode()
 		latency := float64(time.Since(start).Milliseconds())
 
-		_ = enc.Encode(map[string]any{
+		logEvent := map[string]any{
 			"ts":         time.Now().In(loc).Format(time.RFC3339Nano),
 			"request_id": rid,
 			"method":     method,
 			"path":       path,
 			"status":     status,
 			"latency":    latency,
-		})
+		}
+
+		// Add OpenTelemetry trace and span IDs if available
+		spanContext := trace.SpanContextFromContext(c.UserContext())
+		if spanContext.IsValid() {
+			logEvent["trace_id"] = spanContext.TraceID().String()
+			logEvent["span_id"] = spanContext.SpanID().String()
+		}
+
+		_ = enc.Encode(logEvent)
 
 		return err
 	}

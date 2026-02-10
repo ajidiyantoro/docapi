@@ -6,8 +6,10 @@ DocAPI is a Go-based RESTful API service designed for managing documents. It use
 
 - Document management (CRUD operations)
 - High-performance HTTP server using [Fiber](https://gofiber.io/)
-- PostgreSQL integration for document metadata
-- MinIO integration for document file storage
+- OpenTelemetry Distributed Tracing (OTLP, vendor-neutral)
+- PostgreSQL integration for document metadata (with tracing)
+- MinIO integration for document file storage (with tracing)
+- Structured JSON Logging with trace-log correlation
 - Environment-based configuration
 - Docker support for easy deployment
 
@@ -130,6 +132,29 @@ The application is configured using environment variables. You can set these in 
 | `MINIO_SECRET_KEY`         | MinIO secret key                 |                |
 | `MINIO_BUCKET`             | MinIO bucket name                |                |
 | `MINIO_USE_SSL`            | Use SSL for MinIO                | `false`        |
+
+## OpenTelemetry Tracing (OTLP, vendor-neutral)
+
+The application supports distributed tracing using OpenTelemetry with OTLP exporter. Logs remain in JSON format and include `trace_id` and `span_id` for correlation when tracing is active.
+
+### Supported Environment Variables for Tracing
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `OTEL_SDK_DISABLED` | Disable OpenTelemetry SDK | `false` |
+| `OTEL_SERVICE_NAME` | Name of the service | `docapi` |
+| `OTEL_RESOURCE_ATTRIBUTES` | Additional resource attributes (e.g., `deployment.environment=local`) | |
+| `OTEL_EXPORTER_OTLP_PROTOCOL` | OTLP protocol (`grpc` or `http/protobuf`) | `grpc` |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP collector endpoint | |
+| `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT` | Specific endpoint for traces (overrides `OTEL_EXPORTER_OTLP_ENDPOINT`) | |
+| `OTEL_EXPORTER_OTLP_HEADERS` | OTLP exporter headers | |
+| `OTEL_EXPORTER_OTLP_TRACES_HEADERS` | Specific headers for traces | |
+| `OTEL_TRACES_SAMPLER` | Sampler type (`always_on`, `always_off`, `traceidratio`, `parentbased_traceidratio`) | `parentbased_traceidratio` |
+| `OTEL_TRACES_SAMPLER_ARG` | Argument for the sampler (e.g., ratio value) | `1.0` |
+
+### Graceful Degradation
+
+If the OTLP exporter fails to initialize, the application will log an error (`msg="tracing_init_failed"`) but will continue to run using a No-op tracer provider to ensure service availability.
 
 ## API Documentation
 

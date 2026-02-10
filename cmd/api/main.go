@@ -1,11 +1,16 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"log"
+	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
+	"github.com/gofiber/contrib/otelfiber"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/swagger"
 	_ "github.com/joho/godotenv/autoload"
@@ -16,6 +21,7 @@ import (
 	"docapi/internal/database"
 	handlers "docapi/internal/http/handler"
 	"docapi/internal/http/middleware"
+	"docapi/internal/otel"
 	"docapi/internal/repository/postgres"
 	"docapi/internal/service"
 	"docapi/internal/storage"
@@ -27,6 +33,20 @@ import (
 func main() {
 	// Load configuration from environment variables (.env auto-loaded if present)
 	cfg := config.Load()
+
+	// Initialize OpenTelemetry tracing
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	otelShutdown, err := otel.Init(ctx, cfg.Location)
+	if err != nil {
+		log.Fatalf("failed to initialize tracing: %v", err)
+	}
+	defer func() {
+		if err := otelShutdown(context.Background()); err != nil {
+			log.Printf("failed to shutdown tracing: %v", err)
+		}
+	}()
 
 	// Initialize PostgreSQL connection (with pooling via database/sql)
 	db, err := database.NewPostgres(cfg.Database)
@@ -57,6 +77,8 @@ func main() {
 	}
 
 	// Register global middleware
+	// Tracing middleware should be first to capture the whole request
+	app.Use(otelfiber.Middleware())
 	// RequestID middleware adds/propagates X-Request-ID and stores it in context
 	app.Use(middleware.RequestID())
 	// JSON Logger middleware for structured request logs
@@ -95,7 +117,15 @@ func main() {
 		log.Println(string(b))
 	}
 
-	if err := app.Listen(addr); err != nil {
-		log.Fatalf("failed to start server: %v", err)
+	go func() {
+		if err := app.Listen(addr); err != nil {
+			log.Fatalf("failed to start server: %v", err)
+		}
+	}()
+
+	<-ctx.Done()
+	log.Println("shutting down server...")
+	if err := app.Shutdown(); err != nil {
+		log.Printf("server shutdown error: %v", err)
 	}
 }

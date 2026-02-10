@@ -9,13 +9,14 @@ import (
 
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
+	"go.opentelemetry.io/contrib/instrumentation/net/http/otelhttp"
 
 	"docapi/internal/config"
 )
 
 // minioStorage implements the Storage interface using an S3-compatible backend (MinIO, AWS S3, etc.).
 // It is safe for concurrent use by multiple goroutines.
- type minioStorage struct {
+type minioStorage struct {
 	client *minio.Client
 	bucket string
 }
@@ -34,8 +35,9 @@ func NewMinIO(cfg config.MinIOConfig) (Storage, error) {
 	}
 
 	cli, err := minio.New(cfg.Endpoint, &minio.Options{
-		Creds:  credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
-		Secure: cfg.UseSSL,
+		Creds:     credentials.NewStaticV4(cfg.AccessKey, cfg.SecretKey, ""),
+		Secure:    cfg.UseSSL,
+		Transport: otelhttp.NewTransport(nil),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("create minio client: %w", err)
@@ -63,7 +65,7 @@ func NewMinIO(cfg config.MinIOConfig) (Storage, error) {
 // Put uploads an object using streaming I/O only (no local disk).
 func (m *minioStorage) Put(ctx context.Context, key string, r io.Reader, opt PutObjectOptions) (ObjectInfo, error) {
 	putOpts := minio.PutObjectOptions{
-		ContentType: opt.ContentType,
+		ContentType:  opt.ContentType,
 		UserMetadata: opt.Metadata,
 	}
 	info, err := m.client.PutObject(ctx, m.bucket, key, r, opt.Size, putOpts)

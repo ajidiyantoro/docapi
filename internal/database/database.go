@@ -7,7 +7,9 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/XSAM/otelsql"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	semconv "go.opentelemetry.io/otel/semconv/v1.24.0"
 
 	"docapi/internal/config"
 )
@@ -48,7 +50,16 @@ func NewPostgres(c config.DatabaseConfig) (*sql.DB, error) {
 		return nil, err
 	}
 
-	db, err := sqlOpen("pgx", dsn)
+	// Register the otelsql driver wrapper
+	driverName, err := otelsql.Register("pgx",
+		otelsql.WithAttributes(semconv.DBSystemPostgreSQL),
+		otelsql.WithSQLCommenter(true),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("failed to register otelsql: %w", err)
+	}
+
+	db, err := sqlOpen(driverName, dsn)
 	if err != nil {
 		return nil, fmt.Errorf("sql open: %w", err)
 	}
