@@ -1,6 +1,6 @@
-# Use Golang 1.22-alpine as the base image for the build stage
+# Use Golang 1.24-alpine as the base image for the build stage
 # Alpine is used to keep the image size small
-FROM golang:1.22-alpine AS builder
+FROM golang:1.24-alpine AS builder
 
 # Set the working directory inside the container
 WORKDIR /app
