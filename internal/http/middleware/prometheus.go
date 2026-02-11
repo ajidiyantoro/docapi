@@ -2,6 +2,7 @@ package middleware
 
 import (
 	"strconv"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -9,7 +10,8 @@ import (
 
 // PrometheusMiddleware holds the prometheus metrics and registry.
 type PrometheusMiddleware struct {
-	requestCount *prometheus.CounterVec
+	requestCount    *prometheus.CounterVec
+	requestDuration *prometheus.HistogramVec
 }
 
 // NewPrometheusMiddleware creates a new PrometheusMiddleware.
@@ -22,12 +24,21 @@ func NewPrometheusMiddleware(reg prometheus.Registerer) (*PrometheusMiddleware, 
 			},
 			[]string{"method", "path", "status"},
 		),
+		requestDuration: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "http_request_duration_seconds",
+				Help:    "HTTP request latency in seconds",
+				Buckets: prometheus.DefBuckets,
+			},
+			[]string{"method", "route", "status"},
+		),
 	}
 
 	if err := reg.Register(m.requestCount); err != nil {
-		// Return error if already registered, or we can use MustRegister but better handle it.
-		// If it's already registered and we want to reuse it, we might need a different approach.
-		// But usually per registry it should be unique.
+		return nil, err
+	}
+
+	if err := reg.Register(m.requestDuration); err != nil {
 		return nil, err
 	}
 
@@ -42,8 +53,12 @@ func (m *PrometheusMiddleware) Handler() fiber.Handler {
 			return c.Next()
 		}
 
+		start := time.Now()
+
 		// Process the request
 		err := c.Next()
+
+		duration := time.Since(start).Seconds()
 
 		// Get path pattern (e.g., /documents/:id instead of /documents/123)
 		path := c.Route().Path
@@ -51,22 +66,35 @@ func (m *PrometheusMiddleware) Handler() fiber.Handler {
 			path = c.Path() // Fallback to raw path if route not found (e.g. 404)
 		}
 
+		route := "UNMATCHED"
+		if c.Route() != nil && c.Route().Path != "" {
+			route = c.Route().Path
+		}
+
 		status := c.Response().StatusCode()
 		if err != nil {
 			if fiberErr, ok := err.(*fiber.Error); ok {
 				status = fiberErr.Code
-			} else {
-				// Default to 500 if error is not a fiber.Error
-				// This depends on how ErrorHandler is implemented
+			} else if status == 0 || status == fiber.StatusOK {
+				// Default to 500 if error is not a fiber.Error and status is not set or 200
 				status = fiber.StatusInternalServerError
 			}
 		}
 
+		statusStr := strconv.Itoa(status)
+		method := c.Method()
+
 		m.requestCount.WithLabelValues(
-			c.Method(),
+			method,
 			path,
-			strconv.Itoa(status),
+			statusStr,
 		).Inc()
+
+		m.requestDuration.WithLabelValues(
+			method,
+			route,
+			statusStr,
+		).Observe(duration)
 
 		return err
 	}

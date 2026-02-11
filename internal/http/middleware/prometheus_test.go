@@ -101,4 +101,10 @@ func TestPrometheusMiddleware_PathPattern(t *testing.T) {
 	if count != 1 {
 		t.Errorf("expected count 1 for pattern /documents/:id, got %f", count)
 	}
+
+	// Verify Histogram also recorded
+	countDur := testutil.CollectAndCount(promMiddleware.requestDuration)
+	if countDur == 0 {
+		t.Error("expected histogram metrics to be collected, got 0")
+	}
 }
