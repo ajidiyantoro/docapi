@@ -9,7 +9,6 @@ go.work.sum
 
 # Environment variables
 .env
-.env.*
 
 # IDE specific files
 .idea/
