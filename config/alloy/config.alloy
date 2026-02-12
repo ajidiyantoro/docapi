@@ -1,0 +1,49 @@
+otelcol.exporter.otlp "default_tempo" {
+  client {
+    endpoint = "tempo:4317"
+    tls {
+      insecure = true
+    }
+  }
+}
+
+otelcol.receiver.otlp "backend_receiver" {
+  grpc {
+    endpoint = "0.0.0.0:4317"
+  }
+  http {
+    endpoint = "0.0.0.0:4318"
+  }
+
+  output {
+    traces  = [otelcol.exporter.otlp.default_tempo.input]
+  }
+}
+
+discovery.docker "dockerlogs" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "dockerlogs" {
+  targets = []
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex = "/(.*)"
+    target_label = "service"
+  }
+}
+
+loki.source.docker "default" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.docker.dockerlogs.targets
+  labels     = {"platform" = "docker"}
+  relabel_rules = discovery.relabel.dockerlogs.rules
+  forward_to = [loki.write.default.receiver]
+}
+
+loki.write "default" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}
