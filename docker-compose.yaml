@@ -143,6 +143,14 @@ services:
       - minio
       - postgres
 
+  k6:
+    image: grafana/k6
+    volumes:
+      - ./config/k6:/scripts
+    command: run /scripts/loadtest.js
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
 volumes:
   grafana-data:
     name: grafana-data
