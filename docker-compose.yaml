@@ -132,7 +132,10 @@ services:
       - monitoring
 
   docapi:
-    image: docapi
+    #image: docapi
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: docapi
     ports:
       - "8080:8080"
@@ -140,8 +143,10 @@ services:
     networks:
       - monitoring
     depends_on:
-      - minio
-      - postgres
+      postgres:
+        condition: service_healthy
+      minio:
+        condition: service_started
 
   k6:
     image: grafana/k6
