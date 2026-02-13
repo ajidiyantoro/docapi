@@ -98,6 +98,19 @@ To run the application locally:
 go run cmd/api/main.go
 ```
 
+The application will automatically perform database migrations on startup.
+
+### Database Migration
+
+The application includes a built-in migration mechanism that runs during startup:
+- **Sentinel Table:** It uses the `documents` table as a marker. If this table doesn't exist, it executes the baseline migration.
+- **Idempotency:** All SQL statements use `IF NOT EXISTS` to ensure they can be safely run multiple times.
+- **Adding New Migrations:** Currently, migrations are managed in `internal/database/migration/migration.go`. New steps can be added to the `steps` slice.
+- **Behavior:**
+    - First run: Creates the extension, table, and indexes. Logs the process in JSON format.
+    - Subsequent runs: Detects the existing table and skips migration to ensure fast startup.
+    - Fail-fast: If the database is unreachable or a migration step fails, the application will exit with an error log.
+
 ### Using Docker
 
 1. **Build the Docker image:**

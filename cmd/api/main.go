@@ -19,6 +19,7 @@ import (
 	"docapi/docs"
 	"docapi/internal/config"
 	"docapi/internal/database"
+	"docapi/internal/database/migration"
 	handlers "docapi/internal/http/handler"
 	"docapi/internal/http/middleware"
 	"docapi/internal/otel"
@@ -54,6 +55,11 @@ func main() {
 		log.Fatalf("failed to connect to database: %v", err)
 	}
 	defer db.Close()
+
+	// Ensure database schema is up to date
+	if err := migration.EnsureMigrated(ctx, db, cfg.Location, cfg.Database.Host); err != nil {
+		log.Fatalf("failed to migrate database: %v", err)
+	}
 
 	// Initialize reusable S3-compatible object storage client (MinIO-supported)
 	objStore, err := storage.NewMinIO(cfg.MinIO)
