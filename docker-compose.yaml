@@ -145,11 +145,14 @@ services:
 
   k6:
     image: grafana/k6
+    container_name: docapi-loadtest
     volumes:
       - ./config/k6:/scripts
     command: run /scripts/loadtest.js
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    networks:
+      - monitoring
 
 volumes:
   grafana-data:
